@@ -9,6 +9,12 @@
 #include "vm/vm.h"
 #endif
 
+#ifdef USERPROG
+#define FD_TABLE_SIZE 128
+struct child_status;
+struct file;
+#endif
+
 
 /* States in a thread's life cycle. */
 enum thread_status {
@@ -91,13 +97,27 @@ struct thread {
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
+	int base_priority;                  /* Priority before donations. */
+	int nice;                           /* Niceness for MLFQS. */
+	int recent_cpu;                     /* Recent CPU usage for MLFQS. */
+	int64_t wakeup_tick;                /* Tick to wake from timer_sleep(). */
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
+	struct list_elem allelem;           /* List element for all threads. */
+	struct list_elem donation_elem;     /* List element for donations. */
+	struct list donations;              /* Threads donating priority. */
+	struct lock *wait_on_lock;          /* Lock this thread is waiting on. */
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
+	struct file *fd_table[FD_TABLE_SIZE];
+	struct file *executable_file;
+	int next_fd;
+	int exit_status;
+	struct child_status *child_status;
+	struct list children;
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -132,6 +152,7 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+void thread_yield_if_needed (void);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
