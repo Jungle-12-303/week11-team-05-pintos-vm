@@ -1,0 +1,79 @@
+{
+    "configurations": [
+        {
+            "name": "Pintos user tests",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu99",
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+                "${workspaceFolder}/pintos",
+                "${workspaceFolder}/pintos/include/lib",
+                "${workspaceFolder}/pintos/include",
+                "${workspaceFolder}/pintos/include/lib/user",
+                "${workspaceFolder}/pintos/include/lib/kernel",
+                "${workspaceFolder}/pintos/tests"
+            ],
+            "defines": [
+                "USERPROG",
+                "FILESYS"
+            ],
+            "compilerArgs": [
+                "-nostdinc",
+                "-msoft-float",
+                "-mno-red-zone",
+                "-mcmodel=large",
+                "-fno-pic",
+                "-fno-plt",
+                "-fno-stack-protector",
+                "-fno-stack-clash-protection"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/pintos",
+                    "${workspaceFolder}/pintos/include",
+                    "${workspaceFolder}/pintos/include/lib",
+                    "${workspaceFolder}/pintos/include/lib/user",
+                    "${workspaceFolder}/pintos/include/lib/kernel",
+                    "${workspaceFolder}/pintos/tests"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "Pintos kernel",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu99",
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+                "${workspaceFolder}/pintos",
+                "${workspaceFolder}/pintos/include/lib",
+                "${workspaceFolder}/pintos/include",
+                "${workspaceFolder}/pintos/include/lib/kernel"
+            ],
+            "defines": [
+                "USERPROG",
+                "FILESYS"
+            ],
+            "compilerArgs": [
+                "-nostdinc",
+                "-msoft-float",
+                "-mno-red-zone",
+                "-mcmodel=large",
+                "-fno-pic",
+                "-fno-plt",
+                "-fno-stack-protector",
+                "-fno-stack-clash-protection"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/pintos",
+                    "${workspaceFolder}/pintos/include",
+                    "${workspaceFolder}/pintos/include/lib",
+                    "${workspaceFolder}/pintos/include/lib/kernel"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}
