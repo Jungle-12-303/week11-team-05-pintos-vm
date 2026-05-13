@@ -9,12 +9,12 @@
 #include "../debug.h"
 #include "threads/malloc.h"
 
-#define list_elem_to_hash_elem(LIST_ELEM)                       \
-	list_entry(LIST_ELEM, struct hash_elem, list_elem)
+#define list_elem_to_hash_elem(LIST_ELEM) \
+	list_entry (LIST_ELEM, struct hash_elem, list_elem)
 
 static struct list *find_bucket (struct hash *, struct hash_elem *);
 static struct hash_elem *find_elem (struct hash *, struct list *,
-		struct hash_elem *);
+                                    struct hash_elem *);
 static void insert_elem (struct hash *, struct list *, struct hash_elem *);
 static void remove_elem (struct hash *, struct hash_elem *);
 static void rehash (struct hash *);
@@ -23,7 +23,7 @@ static void rehash (struct hash *);
    compare hash elements using LESS, given auxiliary data AUX. */
 bool
 hash_init (struct hash *h,
-		hash_hash_func *hash, hash_less_func *less, void *aux) {
+           hash_hash_func *hash, hash_less_func *less, void *aux) {
 	h->elem_cnt = 0;
 	h->bucket_cnt = 4;
 	h->buckets = malloc (sizeof *h->buckets * h->bucket_cnt);
@@ -366,9 +366,8 @@ rehash (struct hash *h) {
 
 		old_bucket = &old_buckets[i];
 		for (elem = list_begin (old_bucket);
-				elem != list_end (old_bucket); elem = next) {
-			struct list *new_bucket
-				= find_bucket (h, list_elem_to_hash_elem (elem));
+		     elem != list_end (old_bucket); elem = next) {
+			struct list *new_bucket = find_bucket (h, list_elem_to_hash_elem (elem));
 			next = list_next (elem);
 			list_remove (elem);
 			list_push_front (new_bucket, elem);
@@ -391,4 +390,3 @@ remove_elem (struct hash *h, struct hash_elem *e) {
 	h->elem_cnt--;
 	list_remove (&e->list_elem);
 }
-

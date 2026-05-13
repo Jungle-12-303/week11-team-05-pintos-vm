@@ -47,6 +47,8 @@ struct page {
 
 	/* Your implementation */
 	struct hash_elem spt_elem;
+	bool writable;
+	struct thread *owner;
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
 	union {

@@ -48,17 +48,40 @@ static bool spt_page_less (const struct hash_elem *a, const struct hash_elem *b,
 bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
                                 vm_initializer *init, void *aux) {
-	ASSERT (VM_TYPE (type) != VM_UNINIT)
+	ASSERT (VM_TYPE (type) != VM_UNINIT);
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
+	bool (*initializer) (struct page *, enum vm_type, void *) = NULL;
 
-	/* Check wheter the upage is already occupied or not. */
+	upage = pg_round_down (upage);
+
 	if (spt_find_page (spt, upage) == NULL) {
-		/* TODO: Create the page, fetch the initialier according to the VM type,
-		 * TODO: and then create "uninit" page struct by calling uninit_new. You
-		 * TODO: should modify the field after calling the uninit_new. */
+		switch (VM_TYPE (type)) {
+		case VM_ANON:
+			initializer = anon_initializer;
+			break;
 
-		/* TODO: Insert the page into the spt. */
+		case VM_FILE:
+			initializer = file_backed_initializer;
+			break;
+		default:
+			goto err;
+		}
+
+		struct page *page = malloc (sizeof (struct page));
+		if (page == NULL) {
+			goto err;
+		}
+		// 아직 실제 내용 로딩되지 않은 uninit page 상태로 초기화
+		uninit_new (page, upage, init, type, aux, initializer);
+		page->writable = writable;
+		page->owner = thread_current ();
+		if (!spt_insert_page (spt, page)) {
+			free (page);
+			goto err;
+		}
+
+		return true;
 	}
 err:
 	return false;
