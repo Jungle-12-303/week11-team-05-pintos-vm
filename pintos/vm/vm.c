@@ -6,6 +6,10 @@
 #include "vm/inspect.h"
 #include "kernel/hash.h"
 
+/* <<<<<<<<<<<<<<[HELIX]-------------- */
+#include "threads/mmu.h"
+/* --------------[HELIX]>>>>>>>>>>>>>> */
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -162,8 +166,17 @@ spt_page_less (const struct hash_elem *a, const struct hash_elem *b,
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = NULL;
-	/* TODO: Fill this function. */
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
+	struct frame *frame = malloc(sizeof(frame));
+	if (frame == NULL){
+		PANIC("와.. 여기서 할당 안되면 어째해야하노");
+	}
+	
+	frame->kva = palloc_get_page(PAL_USER);
+	if (frame->kva == NULL){
+		free(frame);
+	}
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
@@ -182,12 +195,19 @@ vm_handle_wp (struct page *page UNUSED) {
 
 /* Return true on success */
 bool
-vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
-                     bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
-	struct page *page = NULL;
+vm_try_handle_fault (struct intr_frame *f, void *addr,
+                     bool user, bool write, bool not_present) {
+	struct supplemental_page_table *spt = &thread_current ()->spt;
+	struct page *page;
+
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* TODO: Validate the fault */
+	if (addr == NULL || is_kernel_vaddr(addr)){
+		return false;
+	}
 	/* TODO: Your code goes here */
+	page = spt_find_page (spt, addr);
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 
 	return vm_do_claim_page (page);
 }
@@ -218,8 +238,14 @@ vm_do_claim_page (struct page *page) {
 	frame->page = page;
 	page->frame = frame;
 
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
+	if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable)){
+		return false;
+	}
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 
+	
 	return swap_in (page, frame->kva);
 }
 

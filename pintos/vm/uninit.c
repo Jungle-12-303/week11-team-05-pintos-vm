@@ -51,9 +51,11 @@ uninit_initialize (struct page *page, void *kva) {
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
 
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* TODO: You may need to fix this function. */
 	return uninit->page_initializer (page, uninit->type, kva) &&
 		(init ? init (page, aux) : true);
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 }
 
 /* Free the resources hold by uninit_page. Although most of pages are transmuted
