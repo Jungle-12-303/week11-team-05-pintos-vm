@@ -82,18 +82,21 @@ spt_find_page (struct supplemental_page_table *spt, void *va) {
 
 /* Insert PAGE into spt with validation. */
 bool
-spt_insert_page (struct supplemental_page_table *spt UNUSED,
-                 struct page *page UNUSED) {
+spt_insert_page (struct supplemental_page_table *spt,
+                 struct page *page) {
 	int succ = false;
-	/* TODO: Fill this function. */
+	page->va = pg_round_down (page->va);
+	if (hash_insert (&spt->pages, &page->spt_elem) == NULL) {
+		succ = true;
+	}
 
 	return succ;
 }
 
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
+	hash_delete (&spt->pages, &page->spt_elem);
 	vm_dealloc_page (page);
-	return true;
 }
 
 /* Get the struct frame, that will be evicted. */
