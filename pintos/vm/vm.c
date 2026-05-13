@@ -1,8 +1,10 @@
 /* vm.c: Generic interface for virtual memory objects. */
 
 #include "threads/malloc.h"
+#include "threads/vaddr.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
+#include "kernel/hash.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -36,6 +38,9 @@ page_get_type (struct page *page) {
 static struct frame *vm_get_victim (void);
 static bool vm_do_claim_page (struct page *page);
 static struct frame *vm_evict_frame (void);
+static uint64_t spt_page_hash (const struct hash_elem *e, void *aux);
+static bool spt_page_less (const struct hash_elem *a, const struct hash_elem *b,
+                           void *aux);
 
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
@@ -43,17 +48,40 @@ static struct frame *vm_evict_frame (void);
 bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
                                 vm_initializer *init, void *aux) {
-	ASSERT (VM_TYPE (type) != VM_UNINIT)
+	ASSERT (VM_TYPE (type) != VM_UNINIT);
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
+	bool (*initializer) (struct page *, enum vm_type, void *) = NULL;
 
-	/* Check wheter the upage is already occupied or not. */
+	upage = pg_round_down (upage);
+
 	if (spt_find_page (spt, upage) == NULL) {
-		/* TODO: Create the page, fetch the initialier according to the VM type,
-		 * TODO: and then create "uninit" page struct by calling uninit_new. You
-		 * TODO: should modify the field after calling the uninit_new. */
+		switch (VM_TYPE (type)) {
+		case VM_ANON:
+			initializer = anon_initializer;
+			break;
 
-		/* TODO: Insert the page into the spt. */
+		case VM_FILE:
+			initializer = file_backed_initializer;
+			break;
+		default:
+			goto err;
+		}
+
+		struct page *page = malloc (sizeof (struct page));
+		if (page == NULL) {
+			goto err;
+		}
+		// 아직 실제 내용 로딩되지 않은 uninit page 상태로 초기화
+		uninit_new (page, upage, init, type, aux, initializer);
+		page->writable = writable;
+		page->owner = thread_current ();
+		if (!spt_insert_page (spt, page)) {
+			free (page);
+			goto err;
+		}
+
+		return true;
 	}
 err:
 	return false;
@@ -61,27 +89,37 @@ err:
 
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
-spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *page = NULL;
+spt_find_page (struct supplemental_page_table *spt, void *va) {
 	/* TODO: Fill this function. */
+	va = pg_round_down (va);
+	struct page temp;
+	temp.va = va;
 
-	return page;
+	struct hash_elem *find_elem = hash_find (&spt->pages, &temp.spt_elem);
+	if (find_elem != NULL) {
+		return hash_entry (find_elem, struct page, spt_elem);
+	} else {
+		return NULL;
+	}
 }
 
 /* Insert PAGE into spt with validation. */
 bool
-spt_insert_page (struct supplemental_page_table *spt UNUSED,
-                 struct page *page UNUSED) {
+spt_insert_page (struct supplemental_page_table *spt,
+                 struct page *page) {
 	int succ = false;
-	/* TODO: Fill this function. */
+	page->va = pg_round_down (page->va);
+	if (hash_insert (&spt->pages, &page->spt_elem) == NULL) {
+		succ = true;
+	}
 
 	return succ;
 }
 
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
+	hash_delete (&spt->pages, &page->spt_elem);
 	vm_dealloc_page (page);
-	return true;
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -101,6 +139,21 @@ vm_evict_frame (void) {
 	/* TODO: swap out the victim and return the evicted frame. */
 
 	return NULL;
+}
+
+static uint64_t
+spt_page_hash (const struct hash_elem *e, void *aux) {
+	struct page *page = hash_entry (e, struct page, spt_elem);
+	return hash_bytes (&page->va, sizeof page->va);
+}
+
+static bool
+spt_page_less (const struct hash_elem *a, const struct hash_elem *b,
+               void *aux) {
+	struct page *pa = hash_entry (a, struct page, spt_elem);
+	struct page *pb = hash_entry (b, struct page, spt_elem);
+
+	return (pa->va) < (pb->va);
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -173,6 +226,7 @@ vm_do_claim_page (struct page *page) {
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
+	hash_init (&spt->pages, spt_page_hash, spt_page_less, NULL);
 }
 
 /* Copy supplemental page table from src to dst */
