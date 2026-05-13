@@ -747,18 +747,25 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* Get a page of memory. */
+		// kpage에 user한테 제공할 4kb 메모리 공간 주소 담음
 		uint8_t *kpage = palloc_get_page (PAL_USER);
+		// 실패 시 에러반환
 		if (kpage == NULL)
 			return false;
 
 		/* Load this page. */
+		// file_read 디스크에 있던 데이터를 가져와서
+		// 메모리 kpage 내부에 넣어둠
 		if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
 			palloc_free_page (kpage);
 			return false;
 		}
+		// kpage가 마지막 위치라면 해당 위치부터 read 길이 이후.
+		// 0으로, page_zero_bytes만큼 채움
 		memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
 		/* Add the page to the process's address space. */
+		// 페이지를 프로세스 가상 주소에 매핑해줌
 		if (!install_page (upage, kpage, writable)) {
 			printf ("fail\n");
 			palloc_free_page (kpage);
@@ -873,7 +880,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		 * and zero the final PAGE_ZERO_BYTES bytes. */
 		// page_read_bytes = 현재 할당해야할 페이지의 크기
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		// PGSIZE에서 위에 연산한 page_read_bytes만큼 제외해서, 나머지 부분을 0으로 밀어줌.
+		// PGSIZE에서 위에 연산한 page_read_bytes만큼 제외해서, 나머지 부분.
+		// 차후에 이 부분을 0으로 밀어줘야 함.
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
