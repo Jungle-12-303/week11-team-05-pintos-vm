@@ -133,7 +133,7 @@ initd (void *aux) {
 	process_init ();
 
 	if (process_exec (f_name) < 0)
-		PANIC("Fail to launch initd\n");
+		PANIC ("Fail to launch initd\n");
 	NOT_REACHED ();
 }
 
@@ -159,6 +159,7 @@ process_fork (const char *name, struct intr_frame *if_) {
 	child->waited = false;
 	child->parent_alive = true;
 	child->load_success = false;
+
 	sema_init (&child->wait_sema, 0);
 	sema_init (&child->load_sema, 0);
 
@@ -244,7 +245,7 @@ __do_fork (void *aux) {
 	current->exit_status = 0;
 
 	/* 2. Duplicate PT */
-	current->pml4 = pml4_create();
+	current->pml4 = pml4_create ();
 	if (current->pml4 == NULL)
 		goto error;
 
@@ -328,7 +329,6 @@ process_exec (void *f_name) {
 	NOT_REACHED ();
 }
 
-
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
  * exception), returns -1.  If TID is invalid or if it was not a
@@ -344,7 +344,7 @@ process_wait (tid_t child_tid) {
 	struct child_status *child = NULL;
 
 	for (struct list_elem *e = list_begin (&curr->children);
-			e != list_end (&curr->children); e = list_next (e)) {
+	     e != list_end (&curr->children); e = list_next (e)) {
 		struct child_status *candidate = list_entry (e, struct child_status, elem);
 		if (candidate->tid == child_tid) {
 			child = candidate;
@@ -378,7 +378,7 @@ process_exit (void) {
 
 	while (!list_empty (&curr->children)) {
 		struct child_status *child = list_entry (list_pop_front (&curr->children),
-				struct child_status, elem);
+		                                         struct child_status, elem);
 		child->parent_alive = false;
 		if (child->exited)
 			free (child);
@@ -487,18 +487,18 @@ process_activate (struct thread *next) {
 /* ELF types.  See [ELF1] 1-2. */
 #define EI_NIDENT 16
 
-#define PT_NULL    0            /* Ignore. */
-#define PT_LOAD    1            /* Loadable segment. */
-#define PT_DYNAMIC 2            /* Dynamic linking info. */
-#define PT_INTERP  3            /* Name of dynamic loader. */
-#define PT_NOTE    4            /* Auxiliary info. */
-#define PT_SHLIB   5            /* Reserved. */
-#define PT_PHDR    6            /* Program header table. */
-#define PT_STACK   0x6474e551   /* Stack segment. */
+#define PT_NULL    0          /* Ignore. */
+#define PT_LOAD    1          /* Loadable segment. */
+#define PT_DYNAMIC 2          /* Dynamic linking info. */
+#define PT_INTERP  3          /* Name of dynamic loader. */
+#define PT_NOTE    4          /* Auxiliary info. */
+#define PT_SHLIB   5          /* Reserved. */
+#define PT_PHDR    6          /* Program header table. */
+#define PT_STACK   0x6474e551 /* Stack segment. */
 
-#define PF_X 1          /* Executable. */
-#define PF_W 2          /* Writable. */
-#define PF_R 4          /* Readable. */
+#define PF_X 1 /* Executable. */
+#define PF_W 2 /* Writable. */
+#define PF_R 4 /* Readable. */
 
 /* Executable header.  See [ELF1] 1-4 to 1-8.
  * This appears at the very beginning of an ELF binary. */
@@ -531,19 +531,23 @@ struct ELF64_PHDR {
 };
 
 /* Abbreviations */
-#define ELF ELF64_hdr
+#define ELF  ELF64_hdr
 #define Phdr ELF64_PHDR
 
 static bool setup_stack (struct intr_frame *if_);
 static bool validate_segment (const struct Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
-		uint32_t read_bytes, uint32_t zero_bytes,
-		bool writable);
+                          uint32_t read_bytes, uint32_t zero_bytes,
+                          bool writable);
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
  * Stores the executable's entry point into *RIP
  * and its initial stack pointer into *RSP.
  * Returns true if successful, false otherwise. */
+/* FILE_NAME에 있는 ELF 실행 파일을 현재 스레드로 로드합니다.
+ * 실행 파일의 진입점을 *RIP에 저장합니다.
+ * 초기 스택 포인터를 *RSP에 저장합니다.
+ * 성공하면 true, 실패하면 false를 반환합니다. */
 static bool
 load (const char *file_name, struct intr_frame *if_) {
 	struct thread *t = thread_current ();
@@ -558,7 +562,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	char *cmd = (char *) file_name;
 
 	for (token = strtok_r (cmd, " ", &save_ptr); token != NULL;
-			token = strtok_r (NULL, " ", &save_ptr)) {
+	     token = strtok_r (NULL, " ", &save_ptr)) {
 		if (argc >= 64)
 			goto done;
 		argv[argc++] = token;
@@ -583,13 +587,8 @@ load (const char *file_name, struct intr_frame *if_) {
 	file_deny_write (file);
 
 	/* Read and verify executable header. */
-	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
-			|| memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7)
-			|| ehdr.e_type != 2
-			|| ehdr.e_machine != 0x3E // amd64
-			|| ehdr.e_version != 1
-			|| ehdr.e_phentsize != sizeof (struct Phdr)
-			|| ehdr.e_phnum > 1024) {
+	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 0x3E // amd64
+	    || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof (struct Phdr) || ehdr.e_phnum > 1024) {
 		printf ("load: %s: error loading executable\n", file_name);
 		goto done;
 	}
@@ -607,43 +606,41 @@ load (const char *file_name, struct intr_frame *if_) {
 			goto done;
 		file_ofs += sizeof phdr;
 		switch (phdr.p_type) {
-			case PT_NULL:
-			case PT_NOTE:
-			case PT_PHDR:
-			case PT_STACK:
-			default:
-				/* Ignore this segment. */
-				break;
-			case PT_DYNAMIC:
-			case PT_INTERP:
-			case PT_SHLIB:
-				goto done;
-			case PT_LOAD:
-				if (validate_segment (&phdr, file)) {
-					bool writable = (phdr.p_flags & PF_W) != 0;
-					uint64_t file_page = phdr.p_offset & ~PGMASK;
-					uint64_t mem_page = phdr.p_vaddr & ~PGMASK;
-					uint64_t page_offset = phdr.p_vaddr & PGMASK;
-					uint32_t read_bytes, zero_bytes;
-					if (phdr.p_filesz > 0) {
-						/* Normal segment.
-						 * Read initial part from disk and zero the rest. */
-						read_bytes = page_offset + phdr.p_filesz;
-						zero_bytes = (ROUND_UP (page_offset + phdr.p_memsz, PGSIZE)
-								- read_bytes);
-					} else {
-						/* Entirely zero.
-						 * Don't read anything from disk. */
-						read_bytes = 0;
-						zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
-					}
-					if (!load_segment (file, file_page, (void *) mem_page,
-								read_bytes, zero_bytes, writable))
-						goto done;
+		case PT_NULL:
+		case PT_NOTE:
+		case PT_PHDR:
+		case PT_STACK:
+		default:
+			/* Ignore this segment. */
+			break;
+		case PT_DYNAMIC:
+		case PT_INTERP:
+		case PT_SHLIB:
+			goto done;
+		case PT_LOAD:
+			if (validate_segment (&phdr, file)) {
+				bool writable = (phdr.p_flags & PF_W) != 0;
+				uint64_t file_page = phdr.p_offset & ~PGMASK;
+				uint64_t mem_page = phdr.p_vaddr & ~PGMASK;
+				uint64_t page_offset = phdr.p_vaddr & PGMASK;
+				uint32_t read_bytes, zero_bytes;
+				if (phdr.p_filesz > 0) {
+					/* Normal segment.
+					 * Read initial part from disk and zero the rest. */
+					read_bytes = page_offset + phdr.p_filesz;
+					zero_bytes = (ROUND_UP (page_offset + phdr.p_memsz, PGSIZE) - read_bytes);
+				} else {
+					/* Entirely zero.
+					 * Don't read anything from disk. */
+					read_bytes = 0;
+					zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 				}
-				else
+				if (!load_segment (file, file_page, (void *) mem_page,
+				                   read_bytes, zero_bytes, writable))
 					goto done;
-				break;
+			} else
+				goto done;
+			break;
 		}
 	}
 
@@ -667,7 +664,6 @@ done:
 		file_close (file);
 	return success;
 }
-
 
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
@@ -737,7 +733,7 @@ static bool install_page (void *upage, void *kpage, bool writable);
  * or disk read error occurs. */
 static bool
 load_segment (struct file *file, off_t ofs, uint8_t *upage,
-		uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
+              uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
@@ -764,7 +760,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 		/* Add the page to the process's address space. */
 		if (!install_page (upage, kpage, writable)) {
-			printf("fail\n");
+			printf ("fail\n");
 			palloc_free_page (kpage);
 			return false;
 		}
@@ -803,14 +799,21 @@ setup_stack (struct intr_frame *if_) {
  * with palloc_get_page().
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
+
+/* 사용자 가상 주소 UPAGE에서 커널 가상 주소 KPAGE로의 매핑을 페이지 테이블에 추가합니다.
+ * WRITABLE이 true이면 사용자 프로세스는 해당 페이지를 수정할 수 있습니다.
+ * 그렇지 않으면 읽기 전용입니다.
+ * UPAGE는 이미 매핑되어 있으면 안 됩니다.
+ * KPAGE는 palloc_get_page()를 사용하여 사용자 풀에서 가져온 페이지여야 합니다.
+ * 성공 시 true, UPAGE가 이미 매핑되어 있거나
+ * 메모리 할당에 실패하면 false를 반환합니다. */
 static bool
 install_page (void *upage, void *kpage, bool writable) {
 	struct thread *t = thread_current ();
 
 	/* Verify that there's not already a page at that virtual
 	 * address, then map our page there. */
-	return (pml4_get_page (t->pml4, upage) == NULL
-			&& pml4_set_page (t->pml4, upage, kpage, writable));
+	return (pml4_get_page (t->pml4, upage) == NULL && pml4_set_page (t->pml4, upage, kpage, writable));
 }
 #else
 /* From here, codes will be used after project 3.
@@ -838,9 +841,28 @@ lazy_load_segment (struct page *page, void *aux) {
  *
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
+/* FILE의 주소 UPAGE에서 오프셋 OFS부터 시작하는 세그먼트를 로드합니다.
+ * 총 READ_BYTES + ZERO_BYTES 바이트의 가상 메모리가 다음과 같이 초기화됩니다.
+ *
+ * - UPAGE 주소의 READ_BYTES 바이트는 FILE에서 오프셋 OFS부터 읽어야 합니다.
+ *
+ * - UPAGE + READ_BYTES 주소의 ZERO_BYTES 바이트는 0으로 초기화해야 합니다.
+ *
+ * 이 함수로 초기화된 페이지는 WRITABLE이 true이면 사용자 프로세스에서 쓰기 가능해야 하고, 그렇지 않으면 읽기 전용이어야 합니다.
+ *
+ * 성공하면 true를 반환하고, 메모리 할당 오류 또는 디스크 읽기 오류가 발생하면 false를 반환합니다. */
+
+// 각 매개변수 역할
+// file => 어떤 파일인지
+// ofs => 파일에서 시작할 부분
+// upage => 매핑할 유저 가상 주소
+// read_bytes => 파일에서 실제로 읽어올 바이트 수
+// zero_bytes => 0으로 채울 바이트 수
+// writable => 쓰기 가능 여부
 static bool
 load_segment (struct file *file, off_t ofs, uint8_t *upage,
-		uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
+              uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
+	// 예외처리
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
 	ASSERT (ofs % PGSIZE == 0);
@@ -849,13 +871,16 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* Do calculate how to fill this page.
 		 * We will read PAGE_READ_BYTES bytes from FILE
 		 * and zero the final PAGE_ZERO_BYTES bytes. */
+		// page_read_bytes = 현재 할당해야할 페이지의 크기
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		// PGSIZE에서 위에 연산한 page_read_bytes만큼 제외해서, 나머지 부분을 0으로 밀어줌.
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 		void *aux = NULL;
+		// 여기에서 aux에 들어갈 값을 선언해줘야 함.
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
-					writable, lazy_load_segment, aux))
+		                                     writable, lazy_load_segment, aux))
 			return false;
 
 		/* Advance. */

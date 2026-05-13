@@ -35,3 +35,8 @@ core
 
 agent.md
 AGENT.md
+pintos/.clangd
+pintos/.vscode/
+.clang-format
+.gitattributes
+.vscode/
