@@ -1,6 +1,7 @@
 /* vm.c: Generic interface for virtual memory objects. */
 
 #include "threads/malloc.h"
+#include "threads/vaddr.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "kernel/hash.h"
@@ -65,11 +66,18 @@ err:
 
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
-spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *page = NULL;
+spt_find_page (struct supplemental_page_table *spt, void *va) {
 	/* TODO: Fill this function. */
+	va = pg_round_down (va);
+	struct page temp;
+	temp.va = va;
 
-	return page;
+	struct hash_elem *find_elem = hash_find (&spt->pages, &temp.spt_elem);
+	if (find_elem != NULL) {
+		return hash_entry (find_elem, struct page, spt_elem);
+	} else {
+		return NULL;
+	}
 }
 
 /* Insert PAGE into spt with validation. */
