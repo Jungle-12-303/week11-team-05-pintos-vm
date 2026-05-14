@@ -5,6 +5,9 @@ struct page;
 enum vm_type;
 
 struct anon_page {
+    /* <<<<<<<<<<<<<<[HELIX]-------------- */
+    size_t swap_slot;
+    /* --------------[HELIX]>>>>>>>>>>>>>> */
 };
 
 void vm_anon_init (void);
