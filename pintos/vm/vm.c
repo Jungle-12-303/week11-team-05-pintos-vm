@@ -11,7 +11,6 @@
 
 static struct list frame_table;
 
-
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -26,7 +25,7 @@ vm_init (void) {
 
 	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* frame_table은 일단 리스트로 구현 중 */
-	list_init(&frame_table);
+	list_init (&frame_table);
 	/* --------------[HELIX]>>>>>>>>>>>>>> */
 }
 
@@ -139,39 +138,39 @@ vm_get_victim (void) {
 
 	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* TODO: The policy for eviction is up to you. */
-	if (list_empty(&frame_table)){
+	if (list_empty (&frame_table)) {
 		return NULL;
 	}
-	struct list_elem *el = list_pop_front(&frame_table);
-	victim = list_entry(el, struct frame, elem);
+	struct list_elem *el = list_pop_front (&frame_table);
+	victim = list_entry (el, struct frame, elem);
 
-	list_push_back(&frame_table, el);
+	list_push_back (&frame_table, el);
 	/* --------------[HELIX]>>>>>>>>>>>>>> */
-	
+
 	return victim;
 }
 
 /* Evict one page and return the corresponding frame.
-* Return NULL on error.*/
+ * Return NULL on error.*/
 static struct frame *
 vm_evict_frame (void) {
 	struct frame *victim = vm_get_victim ();
 	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* TODO: swap out the victim and return the evicted frame. */
-	if (victim == NULL){
-		PANIC("FUBAR");
+	if (victim == NULL) {
+		PANIC ("FUBAR");
 	}
-	
+
 	struct page *page = victim->page;
-	if (page == NULL){
+	if (page == NULL) {
 		return victim;
 	}
 
-	if (!swap_out(page)){
-		PANIC("swap_out fail");
+	if (!swap_out (page)) {
+		PANIC ("swap_out fail");
 	}
 
-	pml4_clear_page(page->owner->pml4, page->va);
+	pml4_clear_page (page->owner->pml4, page->va);
 	page->frame = NULL;
 	victim->page = NULL;
 	/* --------------[HELIX]>>>>>>>>>>>>>> */
@@ -201,15 +200,15 @@ spt_page_less (const struct hash_elem *a, const struct hash_elem *b,
 static struct frame *
 vm_get_frame (void) {
 	/* <<<<<<<<<<<<<<[HELIX]-------------- */
-	void *kva = palloc_get_page(PAL_USER);
+	void *kva = palloc_get_page (PAL_USER);
 
-	if (kva == NULL){
+	if (kva == NULL) {
 		return vm_evict_frame;
 	}
 
-	struct frame *frame = malloc(sizeof(frame));
-	if (frame == NULL){
-		PANIC("와.. 여기서 할당 안되면 어째해야하노");
+	struct frame *frame = malloc (sizeof (frame));
+	if (frame == NULL) {
+		PANIC ("와.. 여기서 할당 안되면 어째해야하노");
 	}
 	frame->kva = kva;
 	frame->page = NULL;
@@ -281,10 +280,7 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 		/* stack 접근처럼 보이는 fault만 stack growth로 처리한다.
 		 * x86-64 PUSH 계열 명령은 rsp보다 8바이트 낮은 위치에서 fault가 날 수 있으므로
 		 * fault 주소가 rsp - 8 이상이면 정상 stack 접근 후보로 본다. */
-		if (rsp != NULL
-		    && fault_addr >= stack_pointer - 8
-		    && fault_addr < (uint8_t *) USER_STACK
-		    && (uint8_t *) USER_STACK - (uint8_t *) pg_round_down (addr) <= STACK_MAX) {
+		if (rsp != NULL && fault_addr >= stack_pointer - 8 && fault_addr < (uint8_t *) USER_STACK && (uint8_t *) USER_STACK - (uint8_t *) pg_round_down (addr) <= STACK_MAX) {
 			vm_stack_growth (addr);
 
 			/* stack page를 새로 만들었으므로 다시 SPT에서 찾아온다. */
@@ -315,9 +311,11 @@ vm_dealloc_page (struct page *page) {
 
 /* Claim the page that allocate on VA. */
 bool
-vm_claim_page (void *va UNUSED) {
-	struct page *page = NULL;
-	/* TODO: Fill this function */
+vm_claim_page (void *va) {
+	struct supplemental_page_table *temp_spt = &thread_current ()->spt;
+	struct page *page = spt_find_page (temp_spt, va);
+	if (!page)
+		return false;
 
 	return vm_do_claim_page (page);
 }
@@ -331,14 +329,11 @@ vm_do_claim_page (struct page *page) {
 	frame->page = page;
 	page->frame = frame;
 
-
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-	if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable)){
+	if (!pml4_set_page (thread_current ()->pml4, page->va, frame->kva, page->writable)) {
 		return false;
 	}
 
-
-	
 	return swap_in (page, frame->kva);
 }
 
