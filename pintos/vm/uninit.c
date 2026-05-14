@@ -67,6 +67,7 @@ uninit_initialize (struct page *page, void *kva) {
 	// anon_initializer()
 	// file_backed_initializer()
 
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* TODO: You may need to fix this function. */
 	return page_initializer (page, type, kva) &&
 	       (init ? init (page, aux) : true);

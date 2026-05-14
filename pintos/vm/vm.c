@@ -7,6 +7,10 @@
 #include "kernel/hash.h"
 
 #define STACK_MAX (1 << 20)
+#include "threads/mmu.h"
+
+static struct list frame_table;
+
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -19,7 +23,11 @@ vm_init (void) {
 #endif
 	register_inspect_intr ();
 	/* DO NOT MODIFY UPPER LINES. */
-	/* TODO: Your code goes here. */
+
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
+	/* frame_table은 일단 리스트로 구현 중 */
+	list_init(&frame_table);
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -127,20 +135,48 @@ spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
 /* Get the struct frame, that will be evicted. */
 static struct frame *
 vm_get_victim (void) {
-	struct frame *victim = NULL;
-	/* TODO: The policy for eviction is up to you. */
+	struct frame *victim;
 
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
+	/* TODO: The policy for eviction is up to you. */
+	if (list_empty(&frame_table)){
+		return NULL;
+	}
+	struct list_elem *el = list_pop_front(&frame_table);
+	victim = list_entry(el, struct frame, elem);
+
+	list_push_back(&frame_table, el);
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
+	
 	return victim;
 }
 
 /* Evict one page and return the corresponding frame.
- * Return NULL on error.*/
+* Return NULL on error.*/
 static struct frame *
 vm_evict_frame (void) {
-	struct frame *victim UNUSED = vm_get_victim ();
+	struct frame *victim = vm_get_victim ();
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
 	/* TODO: swap out the victim and return the evicted frame. */
+	if (victim == NULL){
+		PANIC("FUBAR");
+	}
+	
+	struct page *page = victim->page;
+	if (page == NULL){
+		return victim;
+	}
 
-	return NULL;
+	if (!swap_out(page)){
+		PANIC("swap_out fail");
+	}
+
+	pml4_clear_page(page->owner->pml4, page->va);
+	page->frame = NULL;
+	victim->page = NULL;
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
+
+	return victim;
 }
 
 static uint64_t
@@ -164,8 +200,23 @@ spt_page_less (const struct hash_elem *a, const struct hash_elem *b,
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = NULL;
-	/* TODO: Fill this function. */
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
+	void *kva = palloc_get_page(PAL_USER);
+
+	if (kva == NULL){
+		return vm_evict_frame;
+	}
+
+	struct frame *frame = malloc(sizeof(frame));
+	if (frame == NULL){
+		PANIC("와.. 여기서 할당 안되면 어째해야하노");
+	}
+	frame->kva = kva;
+	frame->page = NULL;
+
+	/* 일단 FIFO */
+	list_push_back (&frame_table, &frame->elem);
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
@@ -280,8 +331,14 @@ vm_do_claim_page (struct page *page) {
 	frame->page = page;
 	page->frame = frame;
 
-	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 
+	/* TODO: Insert page table entry to map page's VA to frame's PA. */
+	if (!pml4_set_page(thread_current()->pml4, page->va, frame->kva, page->writable)){
+		return false;
+	}
+
+
+	
 	return swap_in (page, frame->kva);
 }
 
