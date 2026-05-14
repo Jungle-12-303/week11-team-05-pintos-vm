@@ -6,6 +6,8 @@
 #include "vm/inspect.h"
 #include "kernel/hash.h"
 
+#define STACK_MAX (1 << 20)
+
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
 void
@@ -172,7 +174,16 @@ vm_get_frame (void) {
 
 /* Growing the stack. */
 static void
-vm_stack_growth (void *addr UNUSED) {
+vm_stack_growth (void *addr) {
+	void *upage = pg_round_down (addr);
+
+	if ((uint8_t *) USER_STACK - (uint8_t *) upage > STACK_MAX)
+		return;
+
+	if (spt_find_page (&thread_current ()->spt, upage) == NULL) {
+		if (vm_alloc_page (VM_ANON | VM_MARKER_0, upage, true))
+			vm_claim_page (upage);
+	}
 }
 
 /* Handle the fault on write_protected page */
@@ -182,12 +193,38 @@ vm_handle_wp (struct page *page UNUSED) {
 
 /* Return true on success */
 bool
-vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
-                     bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
+vm_try_handle_fault (struct intr_frame *f, void *addr,
+                     bool user, bool write, bool not_present) {
+	struct supplemental_page_table *spt = &thread_current ()->spt;
 	struct page *page = NULL;
-	/* TODO: Validate the fault */
-	/* TODO: Your code goes here */
+	void *rsp;
+	uint8_t *fault_addr = addr;
+
+	if (addr == NULL || is_kernel_vaddr (addr))
+		return false;
+
+	if (!not_present)
+		return false;
+
+	page = spt_find_page (spt, addr);
+	if (page == NULL) {
+		rsp = (void *) f->rsp;
+		uint8_t *stack_pointer = rsp;
+
+		if (rsp != NULL
+		    && fault_addr >= stack_pointer - 8
+		    && fault_addr < (uint8_t *) USER_STACK
+		    && (uint8_t *) USER_STACK - (uint8_t *) pg_round_down (addr) <= STACK_MAX) {
+			vm_stack_growth (addr);
+			page = spt_find_page (spt, addr);
+		}
+	}
+
+	if (page == NULL)
+		return false;
+
+	if (write && !page->writable)
+		return false;
 
 	return vm_do_claim_page (page);
 }
