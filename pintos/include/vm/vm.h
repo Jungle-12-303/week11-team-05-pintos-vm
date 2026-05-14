@@ -65,6 +65,10 @@ struct page {
 struct frame {
 	void *kva;
 	struct page *page;
+
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
+	struct list_elem elem;
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 };
 
 /* The function table for page operations.
