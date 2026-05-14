@@ -54,16 +54,20 @@ uninit_initialize (struct page *page, void *kva) {
 	vm_initializer *init = uninit->init;
 	// args
 	void *aux = uninit->aux;
+	enum vm_type type = uninit->type;
+	bool (*page_initializer) (struct page *, enum vm_type, void *) = uninit->page_initializer;
 
 	// uninit->page_initializer에서 실행될 때
 	// page와 aux값을 날려버릴 수도 있지 않을까?
-	// 필요하다면 순서를 바꿔야 한다고 함
+
+	// uninit인 데이터를 page_initializer로 값을 바꿔버리는데
+	// union에 정상적인 값이 들어갈 가능성이 없지 않나
 
 	// anon_initializer()
 	// file_backed_initializer()
 
 	/* TODO: You may need to fix this function. */
-	return uninit->page_initializer (page, uninit->type, kva) &&
+	return page_initializer (page, type, kva) &&
 	       (init ? init (page, aux) : true);
 }
 
