@@ -10,6 +10,7 @@
 
 #include "vm/vm.h"
 #include "vm/uninit.h"
+#include "threads/malloc.h"
 
 static bool uninit_initialize (struct page *page, void *kva);
 static void uninit_destroy (struct page *page);
@@ -81,6 +82,16 @@ uninit_initialize (struct page *page, void *kva) {
 static void
 uninit_destroy (struct page *page) {
 	struct uninit_page *uninit UNUSED = &page->uninit;
+
+	// 페이지 free는 여기서 안함
+	// 없애야 할 데이터
+	// void *aux
+
+	if (uninit->aux != NULL) {
+		free (uninit->aux);
+	}
+
 	/* TODO: Fill this function.
 	 * TODO: If you don't have anything to do, just return. */
+	return;
 }
