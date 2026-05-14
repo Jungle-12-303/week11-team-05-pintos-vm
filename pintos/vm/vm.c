@@ -175,11 +175,18 @@ vm_get_frame (void) {
 /* Growing the stack. */
 static void
 vm_stack_growth (void *addr) {
+	/* Fault가 발생한 주소를 page boundary에 맞춘다.
+	 * Pintos의 page 할당/관리는 PGSIZE 단위로 이루어지므로,
+	 * 같은 page 안의 어떤 주소에서 fault가 나도 해당 page의 시작 주소를 사용한다. */
 	void *upage = pg_round_down (addr);
 
+	/* 스택은 USER_STACK에서 아래 방향으로 자란다.
+	 * 프로젝트 요구사항에 맞춰 최대 1MB까지만 stack growth를 허용한다. */
 	if ((uint8_t *) USER_STACK - (uint8_t *) upage > STACK_MAX)
 		return;
 
+	/* 이미 SPT에 등록된 page라면 새로 만들 필요가 없다.
+	 * 등록되어 있지 않으면 stack용 anonymous page를 만들고 즉시 claim한다. */
 	if (spt_find_page (&thread_current ()->spt, upage) == NULL) {
 		if (vm_alloc_page (VM_ANON | VM_MARKER_0, upage, true))
 			vm_claim_page (upage);
@@ -200,32 +207,50 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 	void *rsp;
 	uint8_t *fault_addr = addr;
 
+	/* NULL 접근이거나 kernel 영역 주소에 대한 접근이면
+	 * user process가 처리할 수 있는 유효한 page fault가 아니다. */
 	if (addr == NULL || is_kernel_vaddr (addr))
 		return false;
 
+	/* not-present fault만 여기서 처리한다.
+	 * protection fault, 예를 들어 read-only page에 write한 경우는
+	 * 현재 구현에서는 처리하지 않고 실패시킨다. */
 	if (!not_present)
 		return false;
 
+	/* fault가 발생한 주소에 해당하는 page가 이미 SPT에 등록되어 있는지 확인한다.
+	 * lazy loading된 실행 파일 page나 swap out된 page라면 여기서 찾을 수 있다. */
 	page = spt_find_page (spt, addr);
 	if (page == NULL) {
+		/* SPT에 page가 없다면 stack growth 가능성을 검사한다.
+		 * 현재 구조에서는 user mode fault의 rsp를 intr_frame에서 가져온다. */
 		rsp = (void *) f->rsp;
 		uint8_t *stack_pointer = rsp;
 
+		/* stack 접근처럼 보이는 fault만 stack growth로 처리한다.
+		 * x86-64 PUSH 계열 명령은 rsp보다 8바이트 낮은 위치에서 fault가 날 수 있으므로
+		 * fault 주소가 rsp - 8 이상이면 정상 stack 접근 후보로 본다. */
 		if (rsp != NULL
 		    && fault_addr >= stack_pointer - 8
 		    && fault_addr < (uint8_t *) USER_STACK
 		    && (uint8_t *) USER_STACK - (uint8_t *) pg_round_down (addr) <= STACK_MAX) {
 			vm_stack_growth (addr);
+
+			/* stack page를 새로 만들었으므로 다시 SPT에서 찾아온다. */
 			page = spt_find_page (spt, addr);
 		}
 	}
 
+	/* SPT에서도 못 찾고 stack growth도 아니면 처리할 수 없는 fault다. */
 	if (page == NULL)
 		return false;
 
+	/* write fault인데 해당 page가 writable이 아니라면 잘못된 접근이다. */
 	if (write && !page->writable)
 		return false;
 
+	/* page에 실제 frame을 할당하고 page table에 매핑한다.
+	 * uninit page라면 이 과정에서 lazy loading도 수행된다. */
 	return vm_do_claim_page (page);
 }
 
