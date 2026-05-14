@@ -81,17 +81,16 @@ uninit_initialize (struct page *page, void *kva) {
  * PAGE는 호출자에 의해 해제됩니다. */
 static void
 uninit_destroy (struct page *page) {
-	struct uninit_page *uninit UNUSED = &page->uninit;
+	struct uninit_page *uninit = &page->uninit;
 
+	/* TODO: Fill this function.
+	 * TODO: If you don't have anything to do, just return. */
 	// 페이지 free는 여기서 안함
 	// 없애야 할 데이터
 	// void *aux
-
 	if (uninit->aux != NULL) {
 		free (uninit->aux);
 	}
 
-	/* TODO: Fill this function.
-	 * TODO: If you don't have anything to do, just return. */
 	return;
 }
