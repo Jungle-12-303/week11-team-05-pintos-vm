@@ -65,6 +65,10 @@ struct page {
 struct frame {
 	void *kva; // 물리주소 (처리할 때 kern base만큼 제외)
 	struct page *page;
+
+	/* <<<<<<<<<<<<<<[HELIX]-------------- */
+	struct list_elem elem;
+	/* --------------[HELIX]>>>>>>>>>>>>>> */
 };
 
 /* The function table for page operations.
