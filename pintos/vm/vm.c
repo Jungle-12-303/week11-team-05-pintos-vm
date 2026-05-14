@@ -203,10 +203,10 @@ vm_get_frame (void) {
 	void *kva = palloc_get_page (PAL_USER);
 
 	if (kva == NULL) {
-		return vm_evict_frame;
+		return vm_evict_frame ();
 	}
 
-	struct frame *frame = malloc (sizeof (frame));
+	struct frame *frame = malloc (sizeof (struct frame));
 	if (frame == NULL) {
 		PANIC ("와.. 여기서 할당 안되면 어째해야하노");
 	}
