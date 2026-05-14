@@ -1,6 +1,50 @@
 {
     "configurations": [
         {
+            "name": "Pintos VM",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu99",
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+                "${workspaceFolder}/pintos",
+                "${workspaceFolder}/pintos/include/lib",
+                "${workspaceFolder}/pintos/include",
+                "${workspaceFolder}/pintos/include/lib/user",
+                "${workspaceFolder}/pintos/include/lib/kernel",
+                "${workspaceFolder}/pintos/lib/kernel",
+                "${workspaceFolder}/pintos/vm",
+                "${workspaceFolder}/pintos/tests"
+            ],
+            "defines": [
+                "USERPROG",
+                "FILESYS",
+                "VM"
+            ],
+            "compilerArgs": [
+                "-nostdinc",
+                "-msoft-float",
+                "-mno-red-zone",
+                "-mcmodel=large",
+                "-fno-pic",
+                "-fno-plt",
+                "-fno-stack-protector",
+                "-fno-stack-clash-protection"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/pintos",
+                    "${workspaceFolder}/pintos/include/lib",
+                    "${workspaceFolder}/pintos/include",
+                    "${workspaceFolder}/pintos/include/lib/user",
+                    "${workspaceFolder}/pintos/include/lib/kernel",
+                    "${workspaceFolder}/pintos/lib/kernel",
+                    "${workspaceFolder}/pintos/vm",
+                    "${workspaceFolder}/pintos/tests"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
             "name": "Pintos user tests",
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu99",
@@ -11,11 +55,14 @@
                 "${workspaceFolder}/pintos/include",
                 "${workspaceFolder}/pintos/include/lib/user",
                 "${workspaceFolder}/pintos/include/lib/kernel",
-                "${workspaceFolder}/pintos/tests"
+                "${workspaceFolder}/pintos/tests",
+                "${workspaceFolder}/pintos/lib/kernel",
+                "${workspaceFolder}/pintos/vm"
             ],
             "defines": [
                 "USERPROG",
-                "FILESYS"
+                "FILESYS",
+                "VM"
             ],
             "compilerArgs": [
                 "-nostdinc",
@@ -34,7 +81,9 @@
                     "${workspaceFolder}/pintos/include/lib",
                     "${workspaceFolder}/pintos/include/lib/user",
                     "${workspaceFolder}/pintos/include/lib/kernel",
-                    "${workspaceFolder}/pintos/tests"
+                    "${workspaceFolder}/pintos/tests",
+                    "${workspaceFolder}/pintos/lib/kernel",
+                    "${workspaceFolder}/pintos/vm"
                 ],
                 "limitSymbolsToIncludedHeaders": true
             }
@@ -48,11 +97,16 @@
                 "${workspaceFolder}/pintos",
                 "${workspaceFolder}/pintos/include/lib",
                 "${workspaceFolder}/pintos/include",
-                "${workspaceFolder}/pintos/include/lib/kernel"
+                "${workspaceFolder}/pintos/include/lib/kernel",
+                "${workspaceFolder}/pintos/include/lib/user",
+                "${workspaceFolder}/pintos/lib/kernel",
+                "${workspaceFolder}/pintos/vm",
+                "${workspaceFolder}/pintos/tests"
             ],
             "defines": [
                 "USERPROG",
-                "FILESYS"
+                "FILESYS",
+                "VM"
             ],
             "compilerArgs": [
                 "-nostdinc",
@@ -69,7 +123,11 @@
                     "${workspaceFolder}/pintos",
                     "${workspaceFolder}/pintos/include",
                     "${workspaceFolder}/pintos/include/lib",
-                    "${workspaceFolder}/pintos/include/lib/kernel"
+                    "${workspaceFolder}/pintos/include/lib/kernel",
+                    "${workspaceFolder}/pintos/include/lib/user",
+                    "${workspaceFolder}/pintos/lib/kernel",
+                    "${workspaceFolder}/pintos/vm",
+                    "${workspaceFolder}/pintos/tests"
                 ],
                 "limitSymbolsToIncludedHeaders": true
             }
