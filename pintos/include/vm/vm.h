@@ -63,7 +63,7 @@ struct page {
 
 /* The representation of "frame" */
 struct frame {
-	void *kva;
+	void *kva; // 물리주소 (처리할 때 kern base만큼 제외)
 	struct page *page;
 
 	/* <<<<<<<<<<<<<<[HELIX]-------------- */
@@ -93,6 +93,13 @@ struct page_operations {
  * All designs up to you for this. */
 struct supplemental_page_table {
 	struct hash pages;
+};
+
+struct lazy_load_args {
+	struct file *file;
+	off_t ofs;
+	size_t read_bytes;
+	size_t zero_bytes;
 };
 
 #include "threads/thread.h"

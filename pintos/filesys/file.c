@@ -5,9 +5,9 @@
 
 /* An open file. */
 struct file {
-	struct inode *inode;        /* File's inode. */
-	off_t pos;                  /* Current position. */
-	bool deny_write;            /* Has file_deny_write() been called? */
+	struct inode *inode; /* File's inode. */
+	off_t pos;           /* Current position. */
+	bool deny_write;     /* Has file_deny_write() been called? */
 };
 
 /* Opens a file for the given INODE, of which it takes ownership,
@@ -69,6 +69,11 @@ file_get_inode (struct file *file) {
  * Returns the number of bytes actually read,
  * which may be less than SIZE if end of file is reached.
  * Advances FILE's position by the number of bytes read. */
+/* FILE에서 SIZE 바이트를 읽어 BUFFER에 저장합니다.
+ * 파일의 현재 위치에서 시작합니다.
+ * 실제로 읽은 바이트 수를 반환합니다.
+ * 파일 끝에 도달한 경우 SIZE보다 작을 수 있습니다.
+ * 읽은 바이트 수만큼 FILE의 위치를 ​​이동합니다. */
 off_t
 file_read (struct file *file, void *buffer, off_t size) {
 	off_t bytes_read = inode_read_at (file->inode, buffer, size, file->pos);
@@ -109,7 +114,7 @@ file_write (struct file *file, const void *buffer, off_t size) {
  * The file's current position is unaffected. */
 off_t
 file_write_at (struct file *file, const void *buffer, off_t size,
-		off_t file_ofs) {
+               off_t file_ofs) {
 	return inode_write_at (file->inode, buffer, size, file_ofs);
 }
 
