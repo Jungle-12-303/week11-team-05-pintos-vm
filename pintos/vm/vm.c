@@ -203,10 +203,10 @@ vm_get_frame (void) {
 	void *kva = palloc_get_page (PAL_USER);
 
 	if (kva == NULL) {
-		return vm_evict_frame;
+		return vm_evict_frame ();
 	}
 
-	struct frame *frame = malloc (sizeof (frame));
+	struct frame *frame = malloc (sizeof (struct frame));
 	if (frame == NULL) {
 		PANIC ("와.. 여기서 할당 안되면 어째해야하노");
 	}
@@ -223,24 +223,24 @@ vm_get_frame (void) {
 }
 
 /* Growing the stack. */
-static void
+static bool
 vm_stack_growth (void *addr) {
 	/* Fault가 발생한 주소를 page boundary에 맞춘다.
 	 * Pintos의 page 할당/관리는 PGSIZE 단위로 이루어지므로,
 	 * 같은 page 안의 어떤 주소에서 fault가 나도 해당 page의 시작 주소를 사용한다. */
 	void *upage = pg_round_down (addr);
 
-	/* 스택은 USER_STACK에서 아래 방향으로 자란다.
-	 * 프로젝트 요구사항에 맞춰 최대 1MB까지만 stack growth를 허용한다. */
-	if ((uint8_t *) USER_STACK - (uint8_t *) upage > STACK_MAX)
-		return;
+	// /* 스택은 USER_STACK에서 아래 방향으로 자란다.
+	//  * 프로젝트 요구사항에 맞춰 최대 1MB까지만 stack growth를 허용한다. */
+	// if ((uint8_t *) USER_STACK - (uint8_t *) upage > STACK_MAX)
+	// 	return false;
 
-	/* 이미 SPT에 등록된 page라면 새로 만들 필요가 없다.
-	 * 등록되어 있지 않으면 stack용 anonymous page를 만들고 즉시 claim한다. */
-	if (spt_find_page (&thread_current ()->spt, upage) == NULL) {
-		if (vm_alloc_page (VM_ANON | VM_MARKER_0, upage, true))
-			vm_claim_page (upage);
-	}
+	// /* 이미 SPT에 등록된 page라면 새로 만들 필요가 없다.
+	//  * 등록되어 있지 않으면 stack용 anonymous page를 만들고 즉시 claim한다. */
+	// if (spt_find_page (&thread_current ()->spt, upage) != NULL)
+	// 	return true;
+
+	return vm_alloc_page (VM_ANON | VM_MARKER_0, upage, true);
 }
 
 /* Handle the fault on write_protected page */
@@ -281,7 +281,8 @@ vm_try_handle_fault (struct intr_frame *f, void *addr,
 		 * x86-64 PUSH 계열 명령은 rsp보다 8바이트 낮은 위치에서 fault가 날 수 있으므로
 		 * fault 주소가 rsp - 8 이상이면 정상 stack 접근 후보로 본다. */
 		if (rsp != NULL && fault_addr >= stack_pointer - 8 && fault_addr < (uint8_t *) USER_STACK && (uint8_t *) USER_STACK - (uint8_t *) pg_round_down (addr) <= STACK_MAX) {
-			vm_stack_growth (addr);
+			if (!vm_stack_growth (addr))
+				return false;
 
 			/* stack page를 새로 만들었으므로 다시 SPT에서 찾아온다. */
 			page = spt_find_page (spt, addr);
